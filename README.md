@@ -1,61 +1,62 @@
-# DropShare
+# DropLink
 
-**DropShare** is a modern, responsive, and completely free file uploader built to convert any file (images, videos, documents, archives) into a direct, shareable URL.
+**DropLink** is a modern, serverless image-to-URL and file uploader that securely stores your files directly inside your GitHub repository using the GitHub REST API.
 
-The architecture is simple: an HTML/Tailwind frontend combined with a lightweight, secure PHP backend.
+Unlike traditional file hosts, DropLink acts as a frontend interface to your own GitHub repo, providing you with instantaneous, free, permanent direct URLs (`raw.githubusercontent.com`) for images, videos, and documents.
 
 ## Features
 
-- **Drag & Drop Uploading**: Easily select files via click or drag-and-drop.
-- **Direct Link Generation**: Receive a raw URL (`https://yoursite.com/app/files/random.png`) instantly.
-- **Progress Tracking**: Real-time upload progress bars via XHR.
-- **Gallery Viewer**: View all uploaded files, sort by newest, with responsive grid layout and previews.
-- **Comprehensive Embedding**: Auto-generates HTML tags, Markdown code, and BBCode snippets.
-- **Security Built-In**: Randomly renames files, blocks dangerous extensions (PHP, SH, EXE), prevents directory traversal during deletion, and secures the `/files` directory with `.htaccess`.
-- **SEO Optimized**: Includes OpenGraph meta tags, Twitter cards, FAQ section, dense content block, and structured Schema data.
+- **Serverless Architecture**: 100% Client-side. No backend servers, databases, or PHP required.
+- **GitHub API Integration**: Directly uploads (`PUT`), lists (`GET`), and deletes (`DELETE`) files as base64 commits.
+- **Modern UI/UX**: Built with Tailwind CSS. Features dark mode, glassmorphism, fluid animations, and a minimal, premium SaaS aesthetic.
+- **Comprehensive Gallery**: View all uploaded files in a grid layout, open direct links, or generate HTML/Markdown/BBCode embed snippets.
+- **Zero Configuration Hosting**: Can be hosted anywhere (GitHub Pages, Vercel, Netlify, or locally) since the logic runs entirely in the browser.
 
-## Project Architecture
+## Setup Instructions
 
-This application is strictly designed so that **GitHub is only used for version control**, and **Hosting (InfinityFree, 42web, etc.) runs the actual PHP code and stores the files**. Files are stored in the `/app/files/` directory on your server. **Do NOT try to use GitHub Pages** to host this, as GitHub Pages does not support PHP processing or file uploads.
+### 1. Generate a GitHub Personal Access Token
+To allow DropLink to upload files to your repository, you need a Personal Access Token (PAT).
+1. Go to your GitHub Settings -> **Developer settings** -> **Personal access tokens** -> **Tokens (classic)**.
+2. Click **Generate new token (classic)**.
+3. Name it "DropLink Uploader".
+4. Set expiration to "No expiration" (or whatever you prefer).
+5. Under Scopes, select **`repo`** (Full control of private repositories). This is required to push commits via the API.
+6. Click **Generate token** and **COPY it immediately**. You won't be able to see it again.
 
-```text
-/
-├── index.html                 (Redirects traffic automatically to /app/)
-└── app/
-    ├── index.html             (Main drag-and-drop uploader UI & SEO content)
-    ├── gallery.html           (Grid viewer to manage, embed, and delete files)
-    ├── upload.php             (Handles incoming files, validates, and renames them)
-    ├── list-files.php         (Scans the /files directory and returns JSON metadata)
-    ├── delete-file.php        (Safely deletes files, preventing traversal)
-    ├── favicon.png
-    └── files/                 (Storage directory automatically created by upload.php)
-        └── .htaccess          (Prevents script execution for security)
+### 2. Configure DropLink
+1. Clone or download this project.
+2. Rename `config.example.js` to `config.js`.
+3. Open `config.js` and input your token and repository details:
+
+```javascript
+const GITHUB_CONFIG = {
+    // Your personal access token (needs 'repo' scope)
+    TOKEN: "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+
+    // The username or organization that owns the repo
+    OWNER: "your-github-username",
+
+    // The name of the repository to store files in
+    REPO: "your-repo-name",
+
+    // The branch to push files to (usually 'main' or 'master')
+    BRANCH: "main"
+};
 ```
 
-## Setup & Hosting Guide (InfinityFree / 42Web)
+**⚠️ SECURITY WARNING ⚠️**
+If you host this project publicly, **anyone** can view the source code and steal your GitHub token, giving them full access to your repositories.
+- You should either run this tool **locally** on your own computer.
+- OR host it privately (behind authentication).
+- We have added `.gitignore` to prevent you from accidentally committing `config.js` to a public repository.
 
-To run DropShare, you need a hosting provider that supports PHP and file writes (such as InfinityFree, 42web, or any standard cPanel host).
+### 3. Usage
+Simply open `index.html` in your web browser.
+Drag and drop files to upload them. They will be automatically committed to the `files/` directory in your target GitHub repository, and you will receive a direct `raw.githubusercontent.com` URL instantly.
 
-1. **Sign Up / Login**: Register for a free account at [InfinityFree](https://infinityfree.net/) or [42web.io](https://42web.io/).
-2. **Create an Account/Domain**: Create a new hosting account and choose a free subdomain (e.g., `mydrop.epizy.com`).
-3. **Open File Manager**: Navigate to the Control Panel (cPanel) and open the **Online File Manager**.
-4. **Navigate to `htdocs`**: Open the `htdocs` folder (this is the web root). Delete any default `index2.html` files provided by the host.
-5. **Upload the Code**:
-   - Upload the root `index.html` file into `htdocs/`.
-   - Create a folder named `app` inside `htdocs/`.
-   - Upload `index.html`, `gallery.html`, `upload.php`, `list-files.php`, `delete-file.php`, and `favicon.png` into the `app/` folder.
-6. **Create the `files` Directory**:
-   - Inside the `app/` folder, create a new folder named `files`.
-   - Ensure the permissions of the `files` folder are set to `0755` or `0777` (usually the default).
-   - Upload the `.htaccess` file directly into the `app/files/` folder.
-7. **Test the Application**: Go to your chosen domain (e.g., `http://mydrop.epizy.com/`). It should automatically redirect you to the uploader (`/app/`). Try uploading a safe file (like a PNG or JPG).
-
-## Security Notes
-
-- **File Renaming**: `upload.php` strips original filenames and replaces them with an 8-byte cryptographically secure hexadecimal string to prevent collisions and malicious names.
-- **Extension Blocking**: Executable server-side scripts are hardcoded to be rejected.
-- **.htaccess**: Ensures that even if a malicious script bypasses validation, the Apache server will refuse to execute it if placed in the `/files` directory.
+## Architecture & Technical Details
+- File size is limited to 20MB in the frontend UI to maintain stability with browser-based Base64 encoding and GitHub API limits.
+- GitHub's `raw` URLs are used for direct linking, making them perfect for Discord embeds, forum signatures, or static website assets.
 
 ## License
-
 MIT License. Free to use, modify, and distribute.

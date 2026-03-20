@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gallery | DropLink</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class', theme: { extend: {} } }
+    </script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        body { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); min-height: 100vh; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        .file-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .file-card:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.04); border-color: rgba(96, 165, 250, 0.3); }
+        .file-actions { opacity: 0; transform: translateY(10px); transition: all 0.3s ease; }
+        .file-card:hover .file-actions { opacity: 1; transform: translateY(0); }
+        .modal { opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
+        .modal.show { opacity: 1; pointer-events: auto; }
+        .modal-content { transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .modal.show .modal-content { transform: scale(1); }
+    </style>
+</head>
+<body class="antialiased flex flex-col relative overflow-x-hidden">
+
+    <!-- Header -->
+    <nav class="w-full glass-panel sticky top-0 z-50 shadow-2xl">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                    <i class="fa-solid fa-link text-white text-sm"></i>
+                </div>
+                <span class="font-bold tracking-tight text-xl text-white">DropLink</span>
+            </div>
+            <div class="flex gap-6 text-sm font-medium">
+                <a href="index.html" class="text-slate-400 hover:text-white transition-colors py-5">Upload</a>
+                <a href="gallery.html" class="text-blue-400 border-b-2 border-blue-400 py-5">Gallery</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow flex flex-col pt-8 pb-20 px-6 w-full max-w-7xl mx-auto relative z-10">
+
+        <div class="flex justify-between items-center w-full mb-10">
+            <h1 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300">Your Files</h1>
+            <span id="fileCount" class="bg-blue-900/40 text-blue-300 px-4 py-1.5 rounded-full text-xs font-bold border border-blue-500/30">0 Items</span>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="flex flex-col items-center justify-center py-20">
+            <i class="fa-solid fa-circle-notch fa-spin text-4xl text-blue-500 mb-4"></i>
+            <p class="text-slate-400 text-sm font-medium">Fetching files from GitHub API...</p>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden glass-panel rounded-3xl flex flex-col items-center justify-center py-24 text-center w-full border border-slate-700 border-dashed">
+            <div class="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mb-6 shadow-inner">
+                <i class="fa-regular fa-folder-open text-4xl text-slate-500"></i>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-2">No files yet</h3>
+            <p class="text-slate-400 mb-8 text-sm max-w-xs">Upload your first file to see it securely stored in your repository.</p>
+            <a href="index.html" class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-blue-500 hover:to-indigo-500 transition-all shadow-lg shadow-blue-900/20">Start Uploading</a>
+        </div>
+
+        <!-- Grid Container -->
+        <div id="galleryGrid" class="w-full grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 hidden">
+            <!-- Cards injected here -->
+        </div>
+
+    </main>
+
+    <!-- Embed Modal -->
+    <div id="embedModal" class="modal fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div class="modal-content glass-panel w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border border-slate-700">
+            <div class="flex justify-between items-center p-5 border-b border-slate-700/50 bg-slate-800/30">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-code text-blue-400"></i> Embed Links
+                </h3>
+                <button id="closeModalBtn" class="text-slate-400 hover:text-white transition-colors bg-slate-800 hover:bg-slate-700 w-8 h-8 rounded-full flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-5" id="embedOptionsContainer">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-3"></div>
+
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const galleryGrid = document.getElementById('galleryGrid');
+            const emptyState = document.getElementById('emptyState');
+            const loadingState = document.getElementById('loadingState');
+            const fileCountBadge = document.getElementById('fileCount');
+            const embedModal = document.getElementById('embedModal');
+            const embedOptions = document.getElementById('embedOptionsContainer');
+
+            const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+            const videoExts = ['mp4', 'webm', 'ogg'];
+
+            loadFiles();
+
+            async function loadFiles() {
+                loadingState.classList.remove('hidden');
+                emptyState.classList.add('hidden');
+                galleryGrid.classList.add('hidden');
+
+                const files = await fetchFilesList();
+
+                loadingState.classList.add('hidden');
+
+                if (files.length === 0) {
+                    emptyState.classList.remove('hidden');
+                    return;
+                }
+
+                fileCountBadge.textContent = `${files.length} Item${files.length !== 1 ? 's' : ''}`;
+                galleryGrid.classList.remove('hidden');
+                galleryGrid.innerHTML = '';
+
+                files.forEach(file => {
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    let previewHTML = '';
+                    let isMedia = false;
+
+                    if (imageExts.includes(ext)) {
+                        previewHTML = `<img src="${file.url}" alt="${file.name}" class="w-full h-full object-cover" loading="lazy">`;
+                        isMedia = true;
+                    } else if (videoExts.includes(ext)) {
+                        previewHTML = `
+                            <video src="${file.url}" class="w-full h-full object-cover" muted loop onmouseover="this.play()" onmouseout="this.pause()"></video>
+                            <div class="absolute inset-0 flex items-center justify-center bg-black/40">
+                                <i class="fa-solid fa-play text-white/80 text-3xl"></i>
+                            </div>`;
+                        isMedia = true;
+                    } else {
+                        previewHTML = `
+                            <div class="w-full h-full flex flex-col items-center justify-center bg-slate-800/80">
+                                <i class="fa-solid fa-file-code text-4xl text-slate-500 mb-3"></i>
+                                <span class="font-bold text-slate-400 uppercase text-xs tracking-wider">${ext}</span>
+                            </div>`;
+                    }
+
+                    const cardHTML = `
+                        <div class="file-card glass-panel rounded-2xl border border-slate-700/80 overflow-hidden flex flex-col relative group" data-sha="${file.sha}" data-name="${file.name}">
+                            <!-- Preview Box -->
+                            <div class="w-full aspect-square relative overflow-hidden bg-slate-900">
+                                ${previewHTML}
+
+                                <!-- Hover Overlay -->
+                                <div class="file-actions absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 z-10 p-4">
+                                    <div class="flex gap-2">
+                                        <button class="copy-url-btn w-10 h-10 bg-slate-800 hover:bg-blue-600 text-white rounded-xl flex items-center justify-center transition-colors shadow-lg border border-slate-700 hover:border-blue-500" data-url="${file.url}" title="Copy URL">
+                                            <i class="fa-solid fa-link"></i>
+                                        </button>
+                                        <a href="${file.url}" target="_blank" class="w-10 h-10 bg-slate-800 hover:bg-indigo-600 text-white rounded-xl flex items-center justify-center transition-colors shadow-lg border border-slate-700 hover:border-indigo-500" title="Open File">
+                                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                                        </a>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button class="embed-btn w-10 h-10 bg-slate-800 hover:bg-purple-600 text-white rounded-xl flex items-center justify-center transition-colors shadow-lg border border-slate-700 hover:border-purple-500" data-url="${file.url}" data-name="${file.name}" data-media="${isMedia}" title="Embed Links">
+                                            <i class="fa-solid fa-code"></i>
+                                        </button>
+                                        <button class="delete-btn w-10 h-10 bg-slate-800 hover:bg-red-600 text-white rounded-xl flex items-center justify-center transition-colors shadow-lg border border-slate-700 hover:border-red-500" data-sha="${file.sha}" data-name="${file.name}" title="Delete API File">
+                                            <i class="fa-solid fa-trash-can"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Details -->
+                            <div class="p-3 bg-slate-800/40 border-t border-slate-700">
+                                <h4 class="font-medium text-slate-300 text-xs truncate w-full" title="${file.name}">${file.name}</h4>
+                            </div>
+                        </div>
+                    `;
+                    galleryGrid.insertAdjacentHTML('beforeend', cardHTML);
+                });
+
+                attachEvents();
+            }
+
+            function attachEvents() {
+                // Copy URL
+                document.querySelectorAll('.copy-url-btn').forEach(btn => {
+                    btn.addEventListener('click', e => {
+                        copyToClipboard(e.currentTarget.dataset.url);
+                        showToast('Copied raw URL to clipboard', 'success');
+                    });
+                });
+
+                // Delete
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.addEventListener('click', async e => {
+                        const { name, sha } = e.currentTarget.dataset;
+                        if(confirm(`Delete ${name} from repository? This cannot be undone.`)) {
+                            const card = e.currentTarget.closest('.file-card');
+                            card.style.opacity = '0.5';
+                            card.style.pointerEvents = 'none';
+
+                            const success = await deleteFileFromGitHub(name, sha);
+                            if(success) {
+                                showToast(`${name} deleted successfully`);
+                                card.remove();
+                                const currentCount = document.querySelectorAll('.file-card').length;
+                                fileCountBadge.textContent = `${currentCount} Item${currentCount !== 1 ? 's' : ''}`;
+                                if(currentCount === 0) loadFiles();
+                            } else {
+                                showToast(`Failed to delete ${name}`, 'error');
+                                card.style.opacity = '1';
+                                card.style.pointerEvents = 'auto';
+                            }
+                        }
+                    });
+                });
+
+                // Embed Modal
+                document.querySelectorAll('.embed-btn').forEach(btn => {
+                    btn.addEventListener('click', e => {
+                        const { url, name, media } = e.currentTarget.dataset;
+                        const isMedia = media === 'true';
+
+                        embedOptions.innerHTML = `
+                            ${createEmbedRow('Direct URL', url)}
+                            ${createEmbedRow(isMedia ? 'HTML Image/Video' : 'HTML Link',
+                                isMedia && name.match(/\.(mp4|webm)$/i)
+                                ? `<video src="${url}" controls></video>`
+                                : isMedia ? `<img src="${url}" alt="${name}">` : `<a href="${url}">${name}</a>`)}
+                            ${createEmbedRow('Markdown', isMedia ? `![${name}](${url})` : `[${name}](${url})`)}
+                            ${createEmbedRow('BBCode', isMedia ? `[img]${url}[/img]` : `[url=${url}]${name}[/url]`)}
+                        `;
+
+                        // Attach modal copy events
+                        document.querySelectorAll('.modal-copy-btn').forEach(mBtn => {
+                            mBtn.addEventListener('click', evt => {
+                                const input = document.getElementById(evt.currentTarget.dataset.target);
+                                input.select();
+                                copyToClipboard(input.value);
+                                showToast('Copied to clipboard');
+                                const icon = evt.currentTarget.querySelector('i');
+                                icon.className = 'fa-solid fa-check text-emerald-400';
+                                setTimeout(() => icon.className = 'fa-regular fa-copy', 2000);
+                            });
+                        });
+
+                        embedModal.classList.add('show');
+                    });
+                });
+            }
+
+            function createEmbedRow(label, value) {
+                const id = 'embed-' + Math.random().toString(36).substr(2, 5);
+                return `
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">${label}</label>
+                        <div class="flex">
+                            <input type="text" id="${id}" readonly value='${value.replace(/'/g, "&apos;")}' class="flex-grow bg-slate-900/80 border border-slate-700 border-r-0 rounded-l-xl px-4 py-2.5 text-xs text-slate-300 font-mono focus:outline-none focus:border-blue-500 transition-colors">
+                            <button class="modal-copy-btn bg-slate-700 hover:bg-blue-600 text-white px-4 py-2.5 rounded-r-xl transition-colors border border-slate-700 hover:border-blue-500 border-l-0" data-target="${id}">
+                                <i class="fa-regular fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Close modal logic
+            const closeModal = () => embedModal.classList.remove('show');
+            document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+            embedModal.addEventListener('click', e => { if(e.target === embedModal) closeModal(); });
+        });
+    </script>
+</body>
+</html>
