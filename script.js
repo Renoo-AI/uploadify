@@ -1,4 +1,47 @@
+// --- Configuration System (Client-Side) ---
+
+// Default settings fallback
+const DEFAULT_SETTINGS = {
+    token: '',
+    owner: 'Renoo-AI',
+    repo: 'uploadify',
+    branch: 'main'
+};
+
+// Retrieve settings from localStorage
+function getSettings() {
+    const saved = localStorage.getItem('droplink_settings');
+    if (saved) {
+        return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
+    }
+    return DEFAULT_SETTINGS;
+}
+
+// Save settings to localStorage
+function saveSettings(settings) {
+    localStorage.setItem('droplink_settings', JSON.stringify(settings));
+    window.location.reload(); // Reload to apply new API base URLs
+}
+
+// Check if basic setup is complete
+function isSetupComplete() {
+    const s = getSettings();
+    return s.token && s.owner && s.repo;
+}
+
+const config = getSettings();
+const API_BASE = `https://api.github.com/repos/${config.owner}/${config.repo}/contents/files/`;
+const RAW_BASE = `https://raw.githubusercontent.com/${config.owner}/${config.repo}/${config.branch}/files/`;
+
 // --- Utility Functions ---
+
+function getAuthHeaders() {
+    return {
+        'Authorization': `Bearer ${config.token}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+    };
+}
 
 // Convert File to Base64 String (excluding data URL prefix)
 function fileToBase64(file) {
@@ -12,6 +55,20 @@ function fileToBase64(file) {
         };
         reader.onerror = error => reject(error);
     });
+}
+
+// Helper to escape HTML to prevent XSS
+function escapeHTML(str) {
+    if (!str) return '';
+    return str.replace(/[&<>'"]/g,
+        tag => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        }[tag])
+    );
 }
 
 // Generate unique filename to prevent collisions
@@ -70,36 +127,43 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
-// --- Vercel Serverless API Interactions ---
+// --- GitHub Direct API Interactions ---
 
 async function uploadFileToGitHub(file, progressCallback) {
+    if (!isSetupComplete()) {
+        document.getElementById('settingsModal').classList.add('show');
+        return { success: false, error: "Missing Configuration" };
+    }
+
     const uniqueName = generateUniqueFilename(file.name);
+    const url = `${API_BASE}${uniqueName}`;
+    const rawUrl = `${RAW_BASE}${uniqueName}`;
 
     try {
         progressCallback(10); // Start Base64 conversion
         const base64Content = await fileToBase64(file);
 
-        progressCallback(50); // Uploading to API
+        progressCallback(50); // Uploading directly to GitHub API
 
-        const response = await fetch('/api/upload', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                filename: uniqueName,
-                content: base64Content
-            })
+        const payload = {
+            message: `Upload ${uniqueName} via DropLink UI`,
+            content: base64Content,
+            branch: config.branch
+        };
+
+        const response = await fetch(url, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(payload)
         });
 
-        const data = await response.json();
-
-        if (!response.ok || !data.success) {
-            throw new Error(data.error || 'Upload failed');
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.message || 'Upload failed');
         }
 
         progressCallback(100);
-        return { success: true, name: uniqueName, url: data.url };
+        return { success: true, name: uniqueName, url: rawUrl };
 
     } catch (error) {
         console.error("Upload Error:", error);
@@ -108,44 +172,69 @@ async function uploadFileToGitHub(file, progressCallback) {
 }
 
 async function fetchFilesList() {
+    if (!isSetupComplete()) {
+        document.getElementById('settingsModal').classList.add('show');
+        return [];
+    }
+
     try {
-        const response = await fetch('/api/list', {
-            method: 'GET'
+        const response = await fetch(API_BASE, {
+            method: 'GET',
+            headers: getAuthHeaders()
         });
+
+        if (response.status === 404) {
+            // Folder doesn't exist yet, return empty array
+            return [];
+        }
+
+        if (response.status === 401) {
+             throw new Error("Invalid GitHub Token. Please check settings.");
+        }
+
+        if (!response.ok) {
+            throw new Error(`GitHub API error: ${response.status}`);
+        }
 
         const data = await response.json();
 
-        if (!response.ok || !data.success) {
-            throw new Error(data.error || 'Failed to fetch files list');
-        }
-
-        // Reverse to show newest first
-        return data.files.reverse();
+        // Filter out non-files and format
+        return data.filter(item => item.type === 'file').map(item => ({
+            name: item.name,
+            size: item.size,
+            sha: item.sha,
+            url: `${RAW_BASE}${item.name}`,
+            download_url: item.download_url
+        })).reverse(); // Naive reverse to show newest first
 
     } catch (error) {
         console.error("List Error:", error);
-        showToast("Failed to fetch files", 'error');
+        showToast(error.message, 'error');
+        if (error.message.includes("Token")) {
+             document.getElementById('settingsModal').classList.add('show');
+        }
         return [];
     }
 }
 
 async function deleteFileFromGitHub(filename, sha) {
+    if (!isSetupComplete()) return false;
+
     try {
-        const response = await fetch('/api/delete', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                filename: filename,
-                sha: sha
-            })
+        const payload = {
+            message: `Delete ${filename}`,
+            sha: sha,
+            branch: config.branch
+        };
+
+        const response = await fetch(`${API_BASE}${filename}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(payload)
         });
 
-        const data = await response.json();
-
-        if (!response.ok || !data.success) {
-            throw new Error(data.error || 'Delete request failed');
+        if (!response.ok) {
+            throw new Error('Delete request failed');
         }
 
         return true;

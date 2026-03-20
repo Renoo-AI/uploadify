@@ -21,6 +21,21 @@
         .modal-content { transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .modal.show .modal-content { transform: scale(1); }
     </style>
+
+    <style>
+        .settings-modal {
+            visibility: hidden;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        .settings-modal.show {
+            visibility: visible;
+            opacity: 1;
+        }
+        .settings-modal.show > div {
+            transform: scale(1);
+        }
+    </style>
 </head>
 <body class="antialiased flex flex-col relative overflow-x-hidden">
 
@@ -33,9 +48,12 @@
                 </div>
                 <span class="font-bold tracking-tight text-xl text-white">DropLink</span>
             </div>
-            <div class="flex gap-6 text-sm font-medium">
+            <div class="flex gap-6 text-sm font-medium items-center">
                 <a href="index.html" class="text-slate-400 hover:text-white transition-colors py-5">Upload</a>
                 <a href="gallery.html" class="text-blue-400 border-b-2 border-blue-400 py-5">Gallery</a>
+                <button id="navSettingsBtn" class="text-slate-400 hover:text-white transition-colors py-5 ml-4 flex items-center gap-2">
+                    <i class="fa-solid fa-gear"></i> Settings
+                </button>
             </div>
         </div>
     </nav>
@@ -126,15 +144,19 @@
 
                 files.forEach(file => {
                     const ext = file.name.split('.').pop().toLowerCase();
+                    const safeName = escapeHTML(file.name);
+                    const safeUrl = escapeHTML(file.url);
+                    const safeSha = escapeHTML(file.sha);
+
                     let previewHTML = '';
                     let isMedia = false;
 
                     if (imageExts.includes(ext)) {
-                        previewHTML = `<img src="${file.url}" alt="${file.name}" class="w-full h-full object-cover" loading="lazy">`;
+                        previewHTML = `<img src="${safeUrl}" alt="${safeName}" class="w-full h-full object-cover" loading="lazy">`;
                         isMedia = true;
                     } else if (videoExts.includes(ext)) {
                         previewHTML = `
-                            <video src="${file.url}" class="w-full h-full object-cover" muted loop onmouseover="this.play()" onmouseout="this.pause()"></video>
+                            <video src="${safeUrl}" class="w-full h-full object-cover" muted loop onmouseover="this.play()" onmouseout="this.pause()"></video>
                             <div class="absolute inset-0 flex items-center justify-center bg-black/40">
                                 <i class="fa-solid fa-play text-white/80 text-3xl"></i>
                             </div>`;
@@ -143,12 +165,12 @@
                         previewHTML = `
                             <div class="w-full h-full flex flex-col items-center justify-center bg-slate-800/80">
                                 <i class="fa-solid fa-file-code text-4xl text-slate-500 mb-3"></i>
-                                <span class="font-bold text-slate-400 uppercase text-xs tracking-wider">${ext}</span>
+                                <span class="font-bold text-slate-400 uppercase text-xs tracking-wider">${escapeHTML(ext)}</span>
                             </div>`;
                     }
 
                     const cardHTML = `
-                        <div class="file-card glass-panel rounded-2xl border border-slate-700/80 overflow-hidden flex flex-col relative group" data-sha="${file.sha}" data-name="${file.name}">
+                        <div class="file-card glass-panel rounded-2xl border border-slate-700/80 overflow-hidden flex flex-col relative group" data-sha="${safeSha}" data-name="${safeName}">
                             <!-- Preview Box -->
                             <div class="w-full aspect-square relative overflow-hidden bg-slate-900">
                                 ${previewHTML}
@@ -156,18 +178,18 @@
                                 <!-- Hover Overlay -->
                                 <div class="file-actions absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 z-10 p-4">
                                     <div class="flex gap-2">
-                                        <button class="copy-url-btn w-10 h-10 bg-slate-800 hover:bg-blue-600 text-white rounded-xl flex items-center justify-center transition-colors shadow-lg border border-slate-700 hover:border-blue-500" data-url="${file.url}" title="Copy URL">
+                                        <button class="copy-url-btn w-10 h-10 bg-slate-800 hover:bg-blue-600 text-white rounded-xl flex items-center justify-center transition-colors shadow-lg border border-slate-700 hover:border-blue-500" data-url="${safeUrl}" title="Copy URL">
                                             <i class="fa-solid fa-link"></i>
                                         </button>
-                                        <a href="${file.url}" target="_blank" class="w-10 h-10 bg-slate-800 hover:bg-indigo-600 text-white rounded-xl flex items-center justify-center transition-colors shadow-lg border border-slate-700 hover:border-indigo-500" title="Open File">
+                                        <a href="${safeUrl}" target="_blank" class="w-10 h-10 bg-slate-800 hover:bg-indigo-600 text-white rounded-xl flex items-center justify-center transition-colors shadow-lg border border-slate-700 hover:border-indigo-500" title="Open File">
                                             <i class="fa-solid fa-arrow-up-right-from-square"></i>
                                         </a>
                                     </div>
                                     <div class="flex gap-2">
-                                        <button class="embed-btn w-10 h-10 bg-slate-800 hover:bg-purple-600 text-white rounded-xl flex items-center justify-center transition-colors shadow-lg border border-slate-700 hover:border-purple-500" data-url="${file.url}" data-name="${file.name}" data-media="${isMedia}" title="Embed Links">
+                                        <button class="embed-btn w-10 h-10 bg-slate-800 hover:bg-purple-600 text-white rounded-xl flex items-center justify-center transition-colors shadow-lg border border-slate-700 hover:border-purple-500" data-url="${safeUrl}" data-name="${safeName}" data-media="${isMedia}" title="Embed Links">
                                             <i class="fa-solid fa-code"></i>
                                         </button>
-                                        <button class="delete-btn w-10 h-10 bg-slate-800 hover:bg-red-600 text-white rounded-xl flex items-center justify-center transition-colors shadow-lg border border-slate-700 hover:border-red-500" data-sha="${file.sha}" data-name="${file.name}" title="Delete API File">
+                                        <button class="delete-btn w-10 h-10 bg-slate-800 hover:bg-red-600 text-white rounded-xl flex items-center justify-center transition-colors shadow-lg border border-slate-700 hover:border-red-500" data-sha="${safeSha}" data-name="${safeName}" title="Delete API File">
                                             <i class="fa-solid fa-trash-can"></i>
                                         </button>
                                     </div>
@@ -175,7 +197,7 @@
                             </div>
                             <!-- Details -->
                             <div class="p-3 bg-slate-800/40 border-t border-slate-700">
-                                <h4 class="font-medium text-slate-300 text-xs truncate w-full" title="${file.name}">${file.name}</h4>
+                                <h4 class="font-medium text-slate-300 text-xs truncate w-full" title="${safeName}">${safeName}</h4>
                             </div>
                         </div>
                     `;
@@ -272,7 +294,86 @@
             const closeModal = () => embedModal.classList.remove('show');
             document.getElementById('closeModalBtn').addEventListener('click', closeModal);
             embedModal.addEventListener('click', e => { if(e.target === embedModal) closeModal(); });
+
+        // Settings Modal Logic
+        const settingsModal = document.getElementById('settingsModal');
+        const navSettingsBtn = document.getElementById('navSettingsBtn');
+        const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+        const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+
+        // Inputs
+        const iToken = document.getElementById('inputToken');
+        const iOwner = document.getElementById('inputOwner');
+        const iRepo = document.getElementById('inputRepo');
+        const iBranch = document.getElementById('inputBranch');
+
+        function openSettings() {
+            const curSettings = getSettings();
+            iToken.value = curSettings.token || '';
+            iOwner.value = curSettings.owner || 'Renoo-AI';
+            iRepo.value = curSettings.repo || 'uploadify';
+            iBranch.value = curSettings.branch || 'main';
+            settingsModal.classList.add('show');
+        }
+
+        navSettingsBtn.addEventListener('click', openSettings);
+        closeSettingsBtn.addEventListener('click', () => settingsModal.classList.remove('show'));
+
+        saveSettingsBtn.addEventListener('click', () => {
+            const s = {
+                token: iToken.value.trim(),
+                owner: iOwner.value.trim(),
+                repo: iRepo.value.trim(),
+                branch: iBranch.value.trim() || 'main'
+            };
+            if(!s.token || !s.owner || !s.repo) {
+                alert("Please fill in Token, Owner, and Repo");
+                return;
+            }
+            saveSettings(s);
+        });
+
+        // Auto-open if missing config
+        if(!isSetupComplete()) {
+            setTimeout(openSettings, 500);
+        }
+
         });
     </script>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="settings-modal fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div class="bg-slate-900 border border-slate-700 w-full max-w-md rounded-3xl p-6 shadow-2xl transform scale-95 transition-transform duration-300">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-white"><i class="fa-solid fa-gear text-blue-400 mr-2"></i> Configuration</h3>
+                <button id="closeSettingsBtn" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+
+            <p class="text-sm text-slate-400 mb-6">DropLink stores files directly in your GitHub repository. Your token is saved securely in your browser's local storage and never sent anywhere else.</p>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">GitHub Personal Access Token</label>
+                    <input type="password" id="inputToken" placeholder="ghp_..." class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500">
+                    <p class="text-[10px] text-slate-500 mt-1">Requires 'repo' scope.</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">GitHub Username / Owner</label>
+                    <input type="text" id="inputOwner" placeholder="e.g. Renoo-AI" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Repository Name</label>
+                    <input type="text" id="inputRepo" placeholder="e.g. uploadify" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Branch</label>
+                    <input type="text" id="inputBranch" placeholder="main" value="main" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500">
+                </div>
+            </div>
+
+            <button id="saveSettingsBtn" class="w-full mt-8 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-colors shadow-lg">Save Configuration</button>
+        </div>
+    </div>
+
 </body>
 </html>

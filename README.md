@@ -4,13 +4,13 @@
 
 Unlike traditional file hosts, DropLink acts as a frontend interface to your own GitHub repo, providing you with instantaneous, free, permanent direct URLs (`raw.githubusercontent.com`) for images, videos, and documents.
 
-It leverages Vercel Serverless Functions to securely interact with the GitHub API without exposing your personal access tokens to the browser.
+It leverages a **Zero-Config Client-Side** approach. You host the HTML/JS anywhere, and you enter your GitHub Token securely in the browser's local storage.
 
 ## Features
 
-- **Serverless Architecture**: Lightweight frontend utilizing Vercel API routes. No database required.
-- **GitHub API Integration**: Directly uploads (`POST`), lists (`GET`), and deletes (`POST`) files using GitHub.
-- **Secure Token Handling**: Your GitHub Personal Access Token is securely stored as an Environment Variable in Vercel.
+- **100% Client-Side Architecture**: No backend servers or Vercel API routes needed. Host it literally anywhere (GitHub Pages, Netlify, Vercel).
+- **GitHub API Integration**: Directly uploads (`PUT`), lists (`GET`), and deletes (`DELETE`) files using GitHub.
+- **Secure Token Handling**: Your GitHub Personal Access Token is saved only in your browser's local storage. It is **never** committed to the codebase or sent to any third-party server.
 - **Modern UI/UX**: Built with Tailwind CSS. Features dark mode, glassmorphism, fluid animations, and a minimal, premium SaaS aesthetic.
 - **Comprehensive Gallery**: View all uploaded files in a grid layout, open direct links, or generate HTML/Markdown/BBCode embed snippets.
 
@@ -23,31 +23,25 @@ To allow DropLink to upload files to your repository, you need a Personal Access
 3. Give it a descriptive name (e.g., "DropLink Uploads").
 4. Under **Scopes**, check **repo** (Full control of private repositories).
    *Note: If you plan to only use a public repository, you might only need the `public_repo` scope.*
-5. Generate the token and **copy it**. (You will need this for Vercel).
+5. Generate the token and **copy it**.
 
-### 2. Prepare the Repository
-1. Create a repository on GitHub (e.g., `uploadify`).
-2. Push this DropLink code to your repository.
+### 2. Deploy the Frontend
+You can host this repository anywhere that serves static HTML files. No configuration files are required.
+1. Push this code to GitHub.
+2. Enable **GitHub Pages** (Settings > Pages > Source: main branch).
+3. OR deploy it to **Vercel** as a static site.
 
-### 3. Deploy to Vercel
-1. Go to [Vercel](https://vercel.com/) and click "Add New Project".
-2. Import your GitHub repository.
-3. Before clicking "Deploy", open the **Environment Variables** section.
-4. Add the following required Environment Variables:
-   - `GITHUB_TOKEN`: Your GitHub Personal Access Token (e.g., `ghp_...`)
-   - `GITHUB_OWNER`: Your GitHub username or organization name (e.g., `Renoo-AI`)
-   - `GITHUB_REPO`: The name of your repository (e.g., `uploadify`)
-   - `GITHUB_BRANCH` (Optional): The branch to upload to. Defaults to `main`.
-5. Click **Deploy**.
+### 3. Connect DropLink
+1. Open your deployed DropLink website URL.
+2. A **Settings Modal** will automatically appear.
+3. Enter your:
+   - **GitHub Token**: (The one you copied in step 1)
+   - **Username**: Your GitHub username (e.g., `Renoo-AI`)
+   - **Repository Name**: The name of your repository (e.g., `uploadify`)
+4. Click **Save**.
 
-Once deployed, the frontend will automatically use the Vercel Serverless Functions (`/api/upload`, `/api/list`, `/api/delete`) to manage your files securely!
-
-## Project Structure
-- `index.html`: The drag-and-drop uploader UI.
-- `gallery.html`: The gallery and file management UI.
-- `script.js`: Core frontend logic and API interactions.
-- `api/`: Vercel Serverless Functions connecting to GitHub.
+You are now ready to upload files securely straight to your GitHub repository!
 
 ## Security Considerations
-- Your `GITHUB_TOKEN` is extremely sensitive. By using Vercel Environment Variables, it is never exposed in the browser network tab or source code.
-- Files uploaded via DropLink are subject to standard GitHub repository limits. GitHub's API has a hard file size limit; DropLink currently restricts uploads to 20MB to prevent timeout issues on Vercel Serverless Functions and ensure stable base64 conversion.
+- Your `GITHUB_TOKEN` is extremely sensitive. By saving it in `localStorage`, it remains safely in your browser and is only sent directly to `api.github.com`.
+- Files uploaded via DropLink are subject to standard GitHub repository limits. DropLink currently restricts uploads to 20MB to ensure stable base64 conversion in the browser.
