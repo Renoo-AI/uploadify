@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gallery | DropShare</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .toast { transition: all 0.3s ease; transform: translateY(100%); opacity: 0; }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .modal { transition: opacity 0.2s ease; opacity: 0; pointer-events: none; }
+        .modal.show { opacity: 1; pointer-events: auto; }
+        .modal-content { transition: transform 0.3s ease; transform: scale(0.95); }
+        .modal.show .modal-content { transform: scale(1); }
+        .file-card:hover .file-actions { opacity: 1; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <i class="fa-solid fa-cloud-arrow-up text-blue-600 text-2xl mr-2"></i>
+                    <span class="font-bold text-xl tracking-tight">DropShare</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="index.html" class="text-slate-600 font-medium hover:text-slate-800">Upload</a>
+                    <a href="gallery.html" class="text-blue-600 font-medium hover:text-blue-700">Gallery</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Gallery Section -->
+    <main class="flex-grow flex flex-col items-center justify-start pt-12 pb-24 px-4 sm:px-6 w-full max-w-6xl mx-auto">
+        <div class="flex justify-between items-center w-full mb-8">
+            <h1 class="text-3xl font-bold text-slate-900">Your Files</h1>
+            <span id="fileCount" class="bg-slate-200 text-slate-700 px-3 py-1 rounded-full text-sm font-semibold">0 Files</span>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden flex flex-col items-center justify-center py-20 text-center w-full bg-white rounded-2xl border border-slate-200 border-dashed">
+            <i class="fa-regular fa-folder-open text-6xl text-slate-300 mb-4"></i>
+            <h3 class="text-xl font-semibold text-slate-700 mb-2">No files found</h3>
+            <p class="text-slate-500 mb-6">You haven't uploaded any files yet. Head over to the uploader to get started.</p>
+            <a href="index.html" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors">Go to Uploader</a>
+        </div>
+
+        <!-- Grid Container -->
+        <div id="galleryGrid" class="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 hidden">
+            <!-- Cards will be injected here -->
+        </div>
+
+    </main>
+
+    <!-- Embed Modal -->
+    <div id="embedModal" class="modal fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div class="modal-content bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden m-4">
+            <div class="flex justify-between items-center p-5 border-b border-slate-100">
+                <h3 class="text-lg font-bold text-slate-800">Embed Links</h3>
+                <button id="closeModalBtn" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4" id="embedOptionsContainer">
+                <!-- Direct URL -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Direct URL</label>
+                    <div class="flex">
+                        <input type="text" id="embedDirect" readonly class="flex-grow bg-slate-50 border border-slate-200 rounded-l-lg px-3 py-2 text-sm text-slate-600 focus:outline-none focus:border-blue-500">
+                        <button class="modal-copy-btn bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-r-lg transition-colors" data-target="embedDirect">
+                            <i class="fa-regular fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                <!-- HTML -->
+                <div id="htmlEmbedGroup">
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">HTML Image</label>
+                    <div class="flex">
+                        <input type="text" id="embedHtml" readonly class="flex-grow bg-slate-50 border border-slate-200 rounded-l-lg px-3 py-2 text-sm text-slate-600 focus:outline-none focus:border-blue-500">
+                        <button class="modal-copy-btn bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-r-lg transition-colors" data-target="embedHtml">
+                            <i class="fa-regular fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                <!-- Markdown -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Markdown</label>
+                    <div class="flex">
+                        <input type="text" id="embedMd" readonly class="flex-grow bg-slate-50 border border-slate-200 rounded-l-lg px-3 py-2 text-sm text-slate-600 focus:outline-none focus:border-blue-500">
+                        <button class="modal-copy-btn bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-r-lg transition-colors" data-target="embedMd">
+                            <i class="fa-regular fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                <!-- BBCode -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">BBCode (Forums)</label>
+                    <div class="flex">
+                        <input type="text" id="embedBbcode" readonly class="flex-grow bg-slate-50 border border-slate-200 rounded-l-lg px-3 py-2 text-sm text-slate-600 focus:outline-none focus:border-blue-500">
+                        <button class="modal-copy-btn bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-r-lg transition-colors" data-target="embedBbcode">
+                            <i class="fa-regular fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-slate-50 px-6 py-4 flex justify-end border-t border-slate-100">
+                <button id="closeModalFooterBtn" class="bg-slate-200 text-slate-700 hover:bg-slate-300 px-4 py-2 rounded-lg font-medium transition-colors">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const galleryGrid = document.getElementById('galleryGrid');
+            const emptyState = document.getElementById('emptyState');
+            const fileCountBadge = document.getElementById('fileCount');
+            const toastContainer = document.getElementById('toastContainer');
+
+            // Modal Elements
+            const embedModal = document.getElementById('embedModal');
+            const closeModalBtn = document.getElementById('closeModalBtn');
+            const closeModalFooterBtn = document.getElementById('closeModalFooterBtn');
+
+            // Image types for preview
+            const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+            const videoExts = ['mp4', 'webm', 'ogg'];
+
+            // Fetch files on load
+            fetchFiles();
+
+            function fetchFiles() {
+                fetch('list-files.php')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            renderGallery(data.data);
+                        } else {
+                            showToast('Failed to load files', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching files:', error);
+                        showToast('Error connecting to server', 'error');
+                    });
+            }
+
+            function renderGallery(files) {
+                galleryGrid.innerHTML = '';
+                fileCountBadge.textContent = `${files.length} File${files.length !== 1 ? 's' : ''}`;
+
+                if (files.length === 0) {
+                    emptyState.classList.remove('hidden');
+                    galleryGrid.classList.add('hidden');
+                    return;
+                }
+
+                emptyState.classList.add('hidden');
+                galleryGrid.classList.remove('hidden');
+
+                const baseUrl = window.location.origin + window.location.pathname.replace('gallery.html', '');
+
+                files.forEach(file => {
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    const fileUrl = baseUrl + 'files/' + file.name;
+
+                    let previewHTML = '';
+                    let isMedia = false;
+
+                    if (imageExts.includes(ext)) {
+                        previewHTML = `<img src="${fileUrl}" alt="${file.name}" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" loading="lazy">`;
+                        isMedia = true;
+                    } else if (videoExts.includes(ext)) {
+                        previewHTML = `
+                            <video src="${fileUrl}" class="w-full h-full object-cover" muted loop onmouseover="this.play()" onmouseout="this.pause()"></video>
+                            <div class="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+                                <i class="fa-solid fa-play text-white text-3xl opacity-80"></i>
+                            </div>`;
+                        isMedia = true;
+                    } else {
+                        // Generic icon based on type
+                        let iconClass = 'fa-file';
+                        if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) iconClass = 'fa-file-zipper';
+                        else if (['pdf'].includes(ext)) iconClass = 'fa-file-pdf text-red-500';
+                        else if (['doc', 'docx', 'txt'].includes(ext)) iconClass = 'fa-file-word text-blue-500';
+                        else if (['mp3', 'wav', 'flac'].includes(ext)) iconClass = 'fa-file-audio text-purple-500';
+                        else if (['js', 'html', 'css', 'json'].includes(ext)) iconClass = 'fa-file-code text-yellow-500';
+
+                        previewHTML = `
+                            <div class="w-full h-full flex flex-col items-center justify-center bg-slate-100 group-hover:bg-slate-200 transition-colors">
+                                <i class="fa-solid ${iconClass} text-5xl text-slate-400 mb-2"></i>
+                                <span class="font-bold text-slate-500 uppercase text-sm">${ext}</span>
+                            </div>`;
+                    }
+
+                    const card = document.createElement('div');
+                    card.className = 'file-card bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow group flex flex-col relative';
+
+                    card.innerHTML = `
+                        <!-- Preview Area -->
+                        <div class="w-full h-48 bg-slate-100 relative overflow-hidden border-b border-slate-100">
+                            ${previewHTML}
+
+                            <!-- Overlay Actions -->
+                            <div class="file-actions absolute inset-0 bg-slate-900/60 backdrop-blur-[2px] opacity-0 transition-opacity duration-200 flex items-center justify-center gap-3 z-10">
+                                <a href="${fileUrl}" target="_blank" class="w-10 h-10 bg-white/20 hover:bg-white text-white hover:text-blue-600 rounded-full flex items-center justify-center transition-colors shadow-sm" title="Open File">
+                                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                                </a>
+                                <button class="copy-url-btn w-10 h-10 bg-white/20 hover:bg-white text-white hover:text-slate-800 rounded-full flex items-center justify-center transition-colors shadow-sm" data-url="${fileUrl}" title="Copy Link">
+                                    <i class="fa-regular fa-copy"></i>
+                                </button>
+                                <button class="embed-btn w-10 h-10 bg-white/20 hover:bg-white text-white hover:text-purple-600 rounded-full flex items-center justify-center transition-colors shadow-sm" data-url="${fileUrl}" data-type="${isMedia ? 'media' : 'file'}" data-name="${file.name}" title="Embed Links">
+                                    <i class="fa-solid fa-code"></i>
+                                </button>
+                                <a href="${fileUrl}" download="${file.name}" class="w-10 h-10 bg-white/20 hover:bg-white text-white hover:text-green-600 rounded-full flex items-center justify-center transition-colors shadow-sm" title="Download">
+                                    <i class="fa-solid fa-download"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Details Area -->
+                        <div class="p-4 flex flex-col flex-grow">
+                            <div class="flex justify-between items-start mb-2">
+                                <h4 class="font-semibold text-slate-700 truncate w-full pr-2" title="${file.name}">${file.name}</h4>
+                            </div>
+                            <div class="flex justify-between items-end mt-auto">
+                                <div class="flex flex-col">
+                                    <span class="text-xs text-slate-400"><i class="fa-regular fa-clock mr-1"></i>${file.date.split(' ')[0]}</span>
+                                    <span class="text-xs text-slate-500 font-medium">${file.size}</span>
+                                </div>
+                                <button class="delete-btn text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors" data-filename="${file.name}" title="Delete File">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+
+                    galleryGrid.appendChild(card);
+                });
+
+                attachCardEvents();
+            }
+
+            function attachCardEvents() {
+                // Copy Actions
+                document.querySelectorAll('.copy-url-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const url = e.currentTarget.getAttribute('data-url');
+                        copyToClipboard(url);
+                        showToast('Link copied to clipboard!');
+                    });
+                });
+
+                // Delete Actions
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const filename = e.currentTarget.getAttribute('data-filename');
+                        if (confirm(`Are you sure you want to delete ${filename}? This cannot be undone.`)) {
+                            deleteFile(filename, e.currentTarget.closest('.file-card'));
+                        }
+                    });
+                });
+
+                // Embed Actions
+                document.querySelectorAll('.embed-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const url = e.currentTarget.getAttribute('data-url');
+                        const type = e.currentTarget.getAttribute('data-type');
+                        const name = e.currentTarget.getAttribute('data-name');
+                        openEmbedModal(url, type, name);
+                    });
+                });
+            }
+
+            function deleteFile(filename, cardElement) {
+                const formData = new FormData();
+                formData.append('filename', filename);
+
+                fetch('delete-file.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Animate removal
+                        cardElement.style.opacity = '0';
+                        cardElement.style.transform = 'scale(0.9)';
+                        setTimeout(() => {
+                            cardElement.remove();
+                            // Update count visually
+                            const currentCount = parseInt(fileCountBadge.textContent) - 1;
+                            fileCountBadge.textContent = `${currentCount} File${currentCount !== 1 ? 's' : ''}`;
+                            if(currentCount === 0) {
+                                fetchFiles(); // trigger empty state reload
+                            }
+                        }, 300);
+                        showToast('File deleted safely', 'success');
+                    } else {
+                        showToast(data.message || 'Error deleting file', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Delete error:', error);
+                    showToast('Server error while deleting', 'error');
+                });
+            }
+
+            // --- Modal Logic ---
+            function openEmbedModal(url, type, name) {
+                const ext = name.split('.').pop().toLowerCase();
+
+                document.getElementById('embedDirect').value = url;
+
+                // Adjust HTML based on media type
+                const htmlInput = document.getElementById('embedHtml');
+                const htmlGroup = document.getElementById('htmlEmbedGroup');
+                const mdInput = document.getElementById('embedMd');
+                const bbInput = document.getElementById('embedBbcode');
+
+                if (videoExts.includes(ext)) {
+                    htmlGroup.querySelector('label').textContent = 'HTML Video';
+                    htmlInput.value = `<video controls src="${url}"></video>`;
+                    mdInput.value = `[Video Link](${url})`; // Markdown doesn't support video well natively
+                    bbInput.value = `[video]${url}[/video]`;
+                } else if (type === 'media') {
+                    htmlGroup.querySelector('label').textContent = 'HTML Image';
+                    htmlInput.value = `<img src="${url}" alt="${name}">`;
+                    mdInput.value = `![${name}](${url})`;
+                    bbInput.value = `[img]${url}[/img]`;
+                } else {
+                    htmlGroup.querySelector('label').textContent = 'HTML Link';
+                    htmlInput.value = `<a href="${url}">${name}</a>`;
+                    mdInput.value = `[${name}](${url})`;
+                    bbInput.value = `[url=${url}]Download ${name}[/url]`;
+                }
+
+                embedModal.classList.add('show');
+            }
+
+            function closeModal() {
+                embedModal.classList.remove('show');
+            }
+
+            closeModalBtn.addEventListener('click', closeModal);
+            closeModalFooterBtn.addEventListener('click', closeModal);
+            embedModal.addEventListener('click', (e) => {
+                if(e.target === embedModal) closeModal();
+            });
+
+            // Modal Copy Buttons
+            document.querySelectorAll('.modal-copy-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const targetId = e.currentTarget.getAttribute('data-target');
+                    const inputEl = document.getElementById(targetId);
+                    inputEl.select();
+                    copyToClipboard(inputEl.value);
+
+                    // Visual feedback
+                    const icon = e.currentTarget.querySelector('i');
+                    const originalClass = icon.className;
+                    icon.className = 'fa-solid fa-check';
+                    setTimeout(() => icon.className = originalClass, 2000);
+
+                    showToast('Copied to clipboard');
+                });
+            });
+
+            // --- Utilities ---
+            function copyToClipboard(text) {
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(text);
+                } else {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = text;
+                    textArea.style.position = "fixed";
+                    textArea.style.left = "-999999px";
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    try { document.execCommand('copy'); } catch (err) {}
+                    document.body.removeChild(textArea);
+                }
+            }
+
+            function showToast(message, type = 'success') {
+                const toastId = 'toast-' + Date.now();
+                const icon = type === 'success' ? '<i class="fa-solid fa-circle-check text-green-500"></i>' : '<i class="fa-solid fa-circle-exclamation text-red-500"></i>';
+
+                const toastHTML = `
+                    <div id="${toastId}" class="toast bg-white border border-slate-200 shadow-lg rounded-lg px-4 py-3 flex items-center gap-3">
+                        ${icon}
+                        <span class="text-sm font-medium text-slate-700">${message}</span>
+                    </div>
+                `;
+
+                toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+                const toastEl = document.getElementById(toastId);
+                setTimeout(() => toastEl.classList.add('show'), 10);
+                setTimeout(() => {
+                    toastEl.classList.remove('show');
+                    setTimeout(() => toastEl.remove(), 300);
+                }, 3000);
+            }
+        });
+    </script>
+</body>
+</html>

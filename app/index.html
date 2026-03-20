@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Image to URL Converter – Upload and Get Direct Link | DropShare</title>
+    <meta name="description" content="Convert your images, videos, and files into direct URLs instantly. Free, fast, and secure file uploader. Get direct links for embedding and sharing.">
+    <meta name="keywords" content="image to url converter, image hosting, free image uploader, direct link image upload, file sharing, video to url">
+    <meta property="og:title" content="Free Image to URL Converter – Upload and Get Direct Link">
+    <meta property="og:description" content="Instantly convert any file into a direct, shareable URL. 100% free with unlimited bandwidth.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="/app/favicon.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "DropShare Uploader",
+      "description": "Convert your images and files into direct URLs instantly.",
+      "url": "https://yoursite.com/",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "All"
+    }
+    </script>
+    <style>
+        .drag-active { border-color: #3b82f6 !important; background-color: #eff6ff !important; }
+        .toast { transition: all 0.3s ease; transform: translateY(100%); opacity: 0; }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        /* Smooth progress bar */
+        .progress-bar-inner { transition: width 0.2s ease-in-out; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <i class="fa-solid fa-cloud-arrow-up text-blue-600 text-2xl mr-2"></i>
+                    <span class="font-bold text-xl tracking-tight">DropShare</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="index.html" class="text-blue-600 font-medium hover:text-blue-700">Upload</a>
+                    <a href="gallery.html" class="text-slate-600 font-medium hover:text-slate-800">Gallery</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Uploader Section -->
+    <main class="flex-grow flex flex-col items-center justify-start pt-12 pb-24 px-4 sm:px-6 w-full max-w-6xl mx-auto">
+
+        <div class="text-center mb-10 w-full">
+            <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 mb-4">
+                Convert Any File to a <span class="text-blue-600">Direct URL</span>
+            </h1>
+            <p class="text-lg text-slate-600 max-w-2xl mx-auto">
+                Drag and drop your images, videos, documents, or archives. We instantly generate a direct, shareable link you can use anywhere.
+            </p>
+        </div>
+
+        <!-- Uploader Box -->
+        <div id="dropzone" class="w-full max-w-2xl bg-white border-2 border-dashed border-slate-300 rounded-2xl p-10 flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-slate-50 transition-colors duration-200">
+            <input type="file" id="fileInput" multiple class="hidden" accept="*">
+            <div class="bg-blue-100 p-4 rounded-full mb-4">
+                <i class="fa-solid fa-cloud-arrow-up text-3xl text-blue-600"></i>
+            </div>
+            <h3 class="text-xl font-semibold mb-2">Drag & Drop files here</h3>
+            <p class="text-slate-500 mb-6 text-sm">or click to browse from your computer</p>
+            <p class="text-xs text-slate-400">Supported files: Images, Videos, Audio, PDFs, ZIPs, Code. Max size: 100MB.</p>
+            <button id="browseBtn" class="mt-6 bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm">
+                Browse Files
+            </button>
+        </div>
+
+        <!-- Upload Queue -->
+        <div id="uploadQueue" class="w-full max-w-2xl mt-8 space-y-4">
+            <!-- Queue items will be injected here -->
+        </div>
+
+    </main>
+
+    <!-- SEO Content Section -->
+    <section class="bg-white py-16 border-t border-slate-200 w-full">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6">
+            <h2 class="text-3xl font-bold mb-8 text-center">Frequently Asked Questions</h2>
+            <div class="space-y-6 mb-16">
+                <div class="bg-slate-50 p-6 rounded-xl border border-slate-100">
+                    <h3 class="font-bold text-lg mb-2">How long do uploaded files stay online?</h3>
+                    <p class="text-slate-600">Files hosted on DropShare remain active as long as they comply with our terms of service. There are currently no auto-delete limits based on time, making it the perfect permanent image to URL converter.</p>
+                </div>
+                <div class="bg-slate-50 p-6 rounded-xl border border-slate-100">
+                    <h3 class="font-bold text-lg mb-2">What file types are supported?</h3>
+                    <p class="text-slate-600">We support all common safe file types. This includes images (JPG, PNG, GIF, WEBP), videos (MP4, WEBM), audio (MP3, WAV), documents (PDF, DOCX, TXT), and archives (ZIP, RAR). Executable and server-side scripts (like PHP, EXE, SH) are blocked for security.</p>
+                </div>
+                <div class="bg-slate-50 p-6 rounded-xl border border-slate-100">
+                    <h3 class="font-bold text-lg mb-2">Can I get a direct link for Discord or forums?</h3>
+                    <p class="text-slate-600">Yes! Once uploaded, our system provides a direct URL that ends in your file's extension. This direct link works perfectly in Discord embeds, forum signatures (BBCode), Markdown files, or raw HTML `<img>` tags.</p>
+                </div>
+            </div>
+
+            <h2 class="text-3xl font-bold mb-6">The Best Free Image to URL Converter Online</h2>
+            <div class="prose prose-slate max-w-none text-slate-600 space-y-4 leading-relaxed">
+                <p>Welcome to DropShare, the ultimate free platform designed to simplify how you host and share your files online. In today's digital landscape, the need to quickly and securely convert an image, document, or video into a direct, shareable link is paramount. Whether you are a web developer looking for quick asset hosting, a forum moderator needing BBCode links, or simply someone wanting to share a funny meme with friends on Discord, our image to URL converter provides the fastest, most reliable solution available.</p>
+
+                <p><strong>Why Use a Direct Link Uploader?</strong> Many popular cloud storage services wrap your files in complex viewing pages, surrounded by advertisements and unnecessary UI elements. This makes embedding images or linking directly to a file incredibly difficult. Our service is built differently. When you use our drag-and-drop file uploader, our backend immediately provisions a direct file path. This means the URL you receive goes straight to the raw file data—no wrappers, no delays. You can seamlessly embed these URLs into HTML `<img src="your-link.jpg">` tags, CSS background attributes, Markdown documents `![alt](your-link.png)`, or modern web applications.</p>
+
+                <p><strong>Secure, Fast, and Developer Friendly.</strong> We understand that security and reliability are just as important as speed. DropShare employs strict server-side validation to block dangerous executable files (.exe, .php, .sh) while allowing completely safe media and document formats. Every file is instantly renamed using cryptographically secure random strings. This ensures that your files cannot be easily guessed or scraped by unauthorized bots, while also preventing messy filename conflicts. Furthermore, our modern architecture built on standard HTTP protocols guarantees blazing fast upload and download speeds, fully optimized for modern browsers.</p>
+
+                <p><strong>More Than Just Images.</strong> While we excel as an image to URL converter, DropShare is a comprehensive file hosting solution. Need to share a quick video recording of a bug you found? Drag and drop your MP4 file to get an instant video link. Sending a large ZIP archive of project files to a client? Upload it here and send them the secure direct URL. Our platform acts as your personal digital clipboard, bridging the gap between local storage and the vastness of the World Wide Web.</p>
+
+                <p><strong>How to Get Started?</strong> Getting started is incredibly simple and requires absolutely no registration. Simply navigate to the top of this page and locate our modern, drag-and-drop upload zone. You can drag files directly from your desktop, or click the "Browse Files" button to select items using your system's file picker. The moment you select a file, our secure XMLHttpRequest (XHR) engine takes over. You'll see real-time progress bars indicating upload status. The moment the upload completes, our system hands you a ready-to-use direct URL. For your convenience, we automatically copy the new URL to your clipboard—saving you clicks and time. It truly is the fastest workflow for file sharing.</p>
+
+                <p>Join thousands of users who have streamlined their workflow. Stop wrestling with bloated cloud drives and start generating raw, direct file URLs today with DropShare, the premier, ad-free image to URL converter on the web.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 py-8 text-center w-full">
+        <p class="mb-2">© 2023 DropShare. All rights reserved.</p>
+        <p class="text-sm">Built with HTML5, Tailwind CSS, and PHP.</p>
+    </footer>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const dropzone = document.getElementById('dropzone');
+            const fileInput = document.getElementById('fileInput');
+            const browseBtn = document.getElementById('browseBtn');
+            const uploadQueue = document.getElementById('uploadQueue');
+            const toastContainer = document.getElementById('toastContainer');
+
+            // --- UI Events ---
+            browseBtn.addEventListener('click', () => fileInput.click());
+            dropzone.addEventListener('click', (e) => {
+                if(e.target !== browseBtn) fileInput.click();
+            });
+
+            // Drag and drop events
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropzone.addEventListener(eventName, () => dropzone.classList.add('drag-active'), false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, () => dropzone.classList.remove('drag-active'), false);
+            });
+
+            dropzone.addEventListener('drop', (e) => {
+                const files = e.dataTransfer.files;
+                handleFiles(files);
+            });
+
+            fileInput.addEventListener('change', function() {
+                handleFiles(this.files);
+                this.value = ''; // Reset input
+            });
+
+            // --- Core Logic ---
+            function handleFiles(files) {
+                [...files].forEach(uploadFile);
+            }
+
+            function uploadFile(file) {
+                // Validate size (e.g., max 100MB)
+                const maxSize = 100 * 1024 * 1024;
+                if(file.size > maxSize) {
+                    showToast(`File ${file.name} is too large (Max 100MB)`, 'error');
+                    return;
+                }
+
+                // Create Queue Item UI
+                const queueId = 'queue-' + Math.random().toString(36).substr(2, 9);
+                const queueItemHTML = `
+                    <div id="${queueId}" class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-3 transition-all duration-300">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3 overflow-hidden">
+                                <i class="fa-solid fa-file text-slate-400 text-xl"></i>
+                                <span class="font-medium text-sm truncate text-slate-700">${file.name}</span>
+                            </div>
+                            <span class="text-xs font-semibold text-slate-500 status-text">Uploading...</span>
+                        </div>
+                        <div class="w-full bg-slate-100 rounded-full h-2">
+                            <div class="bg-blue-600 h-2 rounded-full progress-bar-inner" style="width: 0%"></div>
+                        </div>
+                        <div class="result-area hidden mt-2 flex items-center gap-2">
+                            <input type="text" readonly class="url-input flex-grow bg-slate-50 border border-slate-200 text-sm rounded-lg px-3 py-2 text-slate-600 focus:outline-none" value="">
+                            <button class="copy-btn bg-slate-100 hover:bg-slate-200 text-slate-700 p-2 rounded-lg transition-colors" title="Copy to clipboard">
+                                <i class="fa-regular fa-copy"></i>
+                            </button>
+                            <a href="#" target="_blank" class="view-btn bg-blue-50 text-blue-600 hover:bg-blue-100 p-2 rounded-lg transition-colors" title="Open in new tab">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            </a>
+                        </div>
+                    </div>
+                `;
+
+                uploadQueue.insertAdjacentHTML('afterbegin', queueItemHTML);
+                const itemEl = document.getElementById(queueId);
+                const progressBar = itemEl.querySelector('.progress-bar-inner');
+                const statusText = itemEl.querySelector('.status-text');
+                const resultArea = itemEl.querySelector('.result-area');
+                const urlInput = itemEl.querySelector('.url-input');
+                const copyBtn = itemEl.querySelector('.copy-btn');
+                const viewBtn = itemEl.querySelector('.view-btn');
+
+                // Perform XHR Upload
+                const xhr = new XMLHttpRequest();
+                const formData = new FormData();
+                formData.append('file', file);
+
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const percentComplete = Math.round((e.loaded / e.total) * 100);
+                        progressBar.style.width = percentComplete + '%';
+                    }
+                });
+
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        const finalUrl = xhr.responseText.trim();
+
+                        // Update UI on success
+                        progressBar.classList.remove('bg-blue-600');
+                        progressBar.classList.add('bg-green-500');
+                        progressBar.style.width = '100%';
+                        statusText.textContent = 'Complete';
+                        statusText.classList.remove('text-slate-500');
+                        statusText.classList.add('text-green-600');
+
+                        // Show result area
+                        resultArea.classList.remove('hidden');
+                        urlInput.value = finalUrl;
+                        viewBtn.href = finalUrl;
+
+                        // Auto copy to clipboard
+                        copyToClipboard(finalUrl);
+                        showToast('Upload successful! Link copied.', 'success');
+
+                        // Setup manual copy button
+                        copyBtn.addEventListener('click', () => {
+                            copyToClipboard(finalUrl);
+                            showToast('Link copied to clipboard!', 'success');
+                        });
+
+                    } else {
+                        // Handle server errors
+                        progressBar.classList.remove('bg-blue-600');
+                        progressBar.classList.add('bg-red-500');
+                        statusText.textContent = 'Failed';
+                        statusText.classList.remove('text-slate-500');
+                        statusText.classList.add('text-red-600');
+                        showToast(xhr.responseText || 'Upload failed', 'error');
+                    }
+                };
+
+                xhr.onerror = function() {
+                    progressBar.classList.remove('bg-blue-600');
+                    progressBar.classList.add('bg-red-500');
+                    statusText.textContent = 'Error';
+                    showToast('Network error occurred during upload', 'error');
+                };
+
+                xhr.open('POST', 'upload.php', true);
+                xhr.send(formData);
+            }
+
+            // --- Utilities ---
+            function copyToClipboard(text) {
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(text);
+                } else {
+                    // Fallback
+                    const textArea = document.createElement("textarea");
+                    textArea.value = text;
+                    textArea.style.position = "fixed";
+                    textArea.style.left = "-999999px";
+                    textArea.style.top = "-999999px";
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    try {
+                        document.execCommand('copy');
+                    } catch (err) {
+                        console.error('Fallback: Oops, unable to copy', err);
+                    }
+                    document.body.removeChild(textArea);
+                }
+            }
+
+            function showToast(message, type = 'success') {
+                const toastId = 'toast-' + Date.now();
+                const icon = type === 'success' ? '<i class="fa-solid fa-circle-check text-green-500"></i>' : '<i class="fa-solid fa-circle-exclamation text-red-500"></i>';
+
+                const toastHTML = `
+                    <div id="${toastId}" class="toast bg-white border border-slate-200 shadow-lg rounded-lg px-4 py-3 flex items-center gap-3">
+                        ${icon}
+                        <span class="text-sm font-medium text-slate-700">${message}</span>
+                    </div>
+                `;
+
+                toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+                const toastEl = document.getElementById(toastId);
+
+                // Trigger animation
+                setTimeout(() => toastEl.classList.add('show'), 10);
+
+                // Remove after 3s
+                setTimeout(() => {
+                    toastEl.classList.remove('show');
+                    setTimeout(() => toastEl.remove(), 300);
+                }, 3000);
+            }
+        });
+    </script>
+</body>
+</html>
