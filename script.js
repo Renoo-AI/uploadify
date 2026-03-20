@@ -1,22 +1,4 @@
-// --- Configuration Check ---
-if (typeof GITHUB_CONFIG === 'undefined') {
-    console.error("GITHUB_CONFIG is not defined. Please create a config.js file based on config.example.js");
-    alert("System Error: Missing configuration. Check console.");
-}
-
-const { TOKEN, OWNER, REPO, BRANCH } = GITHUB_CONFIG;
-const API_BASE = `https://api.github.com/repos/${OWNER}/${REPO}/contents/files/`;
-const RAW_BASE = `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/files/`;
-
 // --- Utility Functions ---
-
-function getAuthHeaders() {
-    return {
-        'Authorization': `Bearer ${TOKEN}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json'
-    };
-}
 
 // Convert File to Base64 String (excluding data URL prefix)
 function fileToBase64(file) {
@@ -88,38 +70,36 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
-// --- GitHub API Interactions ---
+// --- Vercel Serverless API Interactions ---
 
 async function uploadFileToGitHub(file, progressCallback) {
     const uniqueName = generateUniqueFilename(file.name);
-    const url = `${API_BASE}${uniqueName}`;
-    const rawUrl = `${RAW_BASE}${uniqueName}`;
 
     try {
         progressCallback(10); // Start Base64 conversion
         const base64Content = await fileToBase64(file);
 
-        progressCallback(50); // Uploading to GitHub
+        progressCallback(50); // Uploading to API
 
-        const payload = {
-            message: `Upload ${uniqueName}`,
-            content: base64Content,
-            branch: BRANCH
-        };
-
-        const response = await fetch(url, {
-            method: 'PUT',
-            headers: getAuthHeaders(),
-            body: JSON.stringify(payload)
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                filename: uniqueName,
+                content: base64Content
+            })
         });
 
-        if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.message || 'Upload failed');
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Upload failed');
         }
 
         progressCallback(100);
-        return { success: true, name: uniqueName, url: rawUrl };
+        return { success: true, name: uniqueName, url: data.url };
 
     } catch (error) {
         console.error("Upload Error:", error);
@@ -129,30 +109,18 @@ async function uploadFileToGitHub(file, progressCallback) {
 
 async function fetchFilesList() {
     try {
-        const response = await fetch(API_BASE, {
-            method: 'GET',
-            headers: getAuthHeaders()
+        const response = await fetch('/api/list', {
+            method: 'GET'
         });
-
-        if (response.status === 404) {
-            // Folder doesn't exist yet, return empty array
-            return [];
-        }
-
-        if (!response.ok) {
-            throw new Error(`GitHub API error: ${response.status}`);
-        }
 
         const data = await response.json();
 
-        // Filter out non-files if any (directories, etc)
-        return data.filter(item => item.type === 'file').map(item => ({
-            name: item.name,
-            size: item.size,
-            sha: item.sha,
-            url: `${RAW_BASE}${item.name}`,
-            download_url: item.download_url
-        })).reverse(); // Naive reverse to show newest first (based on filename timestamp)
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Failed to fetch files list');
+        }
+
+        // Reverse to show newest first
+        return data.files.reverse();
 
     } catch (error) {
         console.error("List Error:", error);
@@ -163,20 +131,21 @@ async function fetchFilesList() {
 
 async function deleteFileFromGitHub(filename, sha) {
     try {
-        const payload = {
-            message: `Delete ${filename}`,
-            sha: sha,
-            branch: BRANCH
-        };
-
-        const response = await fetch(`${API_BASE}${filename}`, {
-            method: 'DELETE',
-            headers: getAuthHeaders(),
-            body: JSON.stringify(payload)
+        const response = await fetch('/api/delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                filename: filename,
+                sha: sha
+            })
         });
 
-        if (!response.ok) {
-            throw new Error('Delete request failed');
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Delete request failed');
         }
 
         return true;
